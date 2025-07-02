@@ -1,0 +1,98 @@
+name: Church API CI/CD
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Setup Clojure
+        uses: DeLaGuardo/setup-clojure@12.1
+        with:
+          cli: 1.11.1.1273
+      
+      - name: Cache dependencies
+        uses: actions/cache@v3
+        with:
+          path: ~/.m2/repository
+          key: ${{ runner.os }}-deps-${{ hashFiles('**/deps.edn') }}
+          restore-keys: |
+            ${{ runner.os }}-deps-
+      
+      - name: Run tests
+        run: clojure -M:test
+      
+      - name: Generate test coverage report
+        run: clojure -M:test:coverage
+      
+      - name: Upload coverage report
+        uses: actions/upload-artifact@v3
+        with:
+          name: coverage-report
+          path: target/coverage/
+
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Setup Clojure
+        uses: DeLaGuardo/setup-clojure@12.1
+        with:
+          cli: 1.11.1.1273
+          clj-kondo: 2023.05.18
+      
+      - name: Run linter
+        run: clj-kondo --lint src test
+
+  build:
+    needs: [test, lint]
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Setup Clojure
+        uses: DeLaGuardo/setup-clojure@12.1
+        with:
+          cli: 1.11.1.1273
+      
+      - name: Build uberjar
+        run: clojure -T:build uber
+      
+      - name: Upload artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: church-api-uberjar
+          path: target/church-api.jar
+
+  deploy:
+    needs: build
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Download artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: church-api-uberjar
+          path: target/
+      
+      # This is a placeholder for actual deployment
+      # Replace with your actual deployment steps
+      - name: Deploy to production
+        run: |
+          echo "Deploying to production server..."
+          # Example deployment commands:
+          # scp target/church-api.jar user@your-server:/path/to/deployment/
+          # ssh user@your-server 'systemctl restart church-api'
+        env:
+          # Add any necessary deployment secrets here
+          DEPLOY_KEY: ${{ secrets.DEPLOY_KEY }}
