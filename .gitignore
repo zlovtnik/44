@@ -2,13 +2,16 @@
 
 # Build output
 /target/
-/pom.xml
+target/
+pom.xml
 /classes/
+.calva/
 
 # Clojure REPL and tooling files
 .nrepl-port
 .cpcache/
 .clj-kondo/.cache/
+.clj-kondo/
 .lsp/.cache/
 
 # Local database file

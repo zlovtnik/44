@@ -1,0 +1,4 @@
+#kaocha/v1
+{:tests [{:id :all
+          :ns-patterns ["-test$"]
+          :fixtures [:church-api.test-helper/db-fixture]}]}

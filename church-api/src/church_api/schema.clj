@@ -67,94 +67,79 @@
 ;; GraphQL Resolvers
 (def field-resolvers
   {:Member
-   {:groups (fn [member _ _]
-              (map map-db-group (db/get-member-groups (:id member))))
-    :attendances (fn [member _ _]
-                   (map map-db-attendance (db/get-member-attendances (:id member))))
-    :donations (fn [member _ _]
-                 (map map-db-donation (db/get-member-donations (:id member))))}
+   {:groups (fn [_ {:keys [id]} _]
+              (map map-db-group (db/get-member-groups id)))
+    :attendances (fn [_ {:keys [id]} _]
+                   (map map-db-attendance (db/get-member-attendances id)))
+    :donations (fn [_ {:keys [id]} _]
+                 (map map-db-donation (db/get-member-donations id)))}
    :Group
-   {:leader (fn [group _ _]
-              (map-db-member (db/get-member (:leaderId group))))
-    :members (fn [group _ _]
-               (map map-db-member (db/get-group-members (:id group))))}
+   {:leader (fn [{:keys [leaderId]} _ _]
+              (map-db-member (db/get-member leaderId)))
+    :members (fn [{:keys [id]} _ _]
+               (map map-db-member (db/get-group-members id)))}
    :Event
-   {:attendances (fn [event _ _]
-                   (map map-db-attendance (db/get-event-attendances (:id event))))}})
+   {:attendances (fn [{:keys [id]} _ _]
+                   (map map-db-attendance (db/get-event-attendances id)))}})
 
 (def query-resolvers
-  {:member (fn [_ args _]
-             (map-db-member (db/get-member (:id args))))
+  {:member (fn [_ {:keys [id]} _]
+             (map-db-member (db/get-member id)))
    :members (fn [_ _ _]
               (map map-db-member (db/get-members)))
-   :event (fn [_ args _]
-            (map-db-event (db/get-event (:id args))))
+   :event (fn [_ {:keys [id]} _]
+            (map-db-event (db/get-event id)))
    :events (fn [_ _ _]
              (map map-db-event (db/get-events)))
-   :group (fn [_ args _]
-            (map-db-group (db/get-group (:id args))))
+   :group (fn [_ {:keys [id]} _]
+            (map-db-group (db/get-group id)))
    :groups (fn [_ _ _]
              (map map-db-group (db/get-groups)))})
 
 (def mutation-resolvers
-  {:createMember (fn [_ args _]
-                   (let [member-data (-> args :input)
-                         result (db/create-member! (-> member-data
+  {:createMember (fn [_ {:keys [input]} _]
+                   (let [result (db/create-member! (-> input
                                                        (set/rename-keys {:firstName :first_name
                                                                          :lastName :last_name
                                                                          :joinDate :join_date})))]
-                     (map-db-member (assoc member-data :id (get-in result [0 :id])))))
-   :updateMember (fn [_ args _]
-                   (let [id (:id args)
-                         member-data (-> args :input)
-                         updated-data (-> member-data
-                                          (set/rename-keys {:firstName :first_name
-                                                            :lastName :last_name
-                                                            :joinDate :join_date}))]
-                     (db/update-member! id updated-data)
-                     (map-db-member (assoc updated-data :id id))))
-   :createAttendance (fn [_ args _]
-                       (let [attendance-data (-> args :input)
-                             result (db/create-attendance! attendance-data)]
-                         (map-db-attendance (assoc attendance-data :id (get-in result [0 :id])))))
-   :createDonation (fn [_ args _]
-                     (let [donation-data (-> args :input)
-                           result (db/create-donation! (-> donation-data
+                     (map-db-member (db/get-member (get-in result [0 :id])))))
+   :updateMember (fn [_ {:keys [id input]} _]
+                   (db/update-member! id (-> input
+                                             (set/rename-keys {:firstName :first_name
+                                                               :lastName :last_name
+                                                               :joinDate :join_date})))
+                   (map-db-member (db/get-member id)))
+   :createAttendance (fn [_ {:keys [input]} _]
+                       (let [result (db/create-attendance! input)]
+                         (map-db-attendance (db/get-attendance (get-in result [0 :id])))))
+   :createDonation (fn [_ {:keys [input]} _]
+                     (let [result (db/create-donation! (-> input
                                                            (set/rename-keys {:donationDate :donation_date})))]
-                       (map-db-donation (assoc donation-data :id (get-in result [0 :id])))))
-   :addMemberToGroup (fn [_ args _]
-                       (let [{:keys [memberId groupId]} args]
-                         (db/add-member-to-group! memberId groupId)
-                         (map-db-group (db/get-group groupId))))
-   :removeMemberFromGroup (fn [_ args _]
-                            (let [{:keys [memberId groupId]} args]
-                              (db/remove-member-from-group! memberId groupId)
-                              (map-db-group (db/get-group groupId))))
-   :deleteMember (fn [_ args _]
-                   (let [id (:id args)]
-                     (db/delete-member! id)
-                     {:id id :success true}))
-   :createEvent (fn [_ args _]
-                  (let [event-data (-> args :input)
-                        result (db/create-event! (-> event-data
+                       (map-db-donation (db/get-donation (get-in result [0 :id])))))
+   :addMemberToGroup (fn [_ {:keys [memberId groupId]} _]
+                       (db/add-member-to-group! memberId groupId)
+                       {:memberId memberId :groupId groupId :success true})
+   :removeMemberFromGroup (fn [_ {:keys [memberId groupId]} _]
+                            (db/remove-member-from-group! memberId groupId)
+                            {:memberId memberId :groupId groupId :success true})
+   :deleteMember (fn [_ {:keys [id]} _]
+                   (db/delete-member! id)
+                   {:id id :success true})
+   :createEvent (fn [_ {:keys [input]} _]
+                  (let [result (db/create-event! (-> input
                                                      (set/rename-keys {:eventDate :event_date})))]
-                    (map-db-event (assoc event-data :id (get-in result [0 :id])))))
-   :updateEvent (fn [_ args _]
-                  (let [id (:id args)
-                        event-data (-> args :input)
-                        updated-data (-> event-data
-                                         (set/rename-keys {:eventDate :event_date}))]
-                    (db/update-event! id updated-data)
-                    (map-db-event (db/get-event id))))
-   :deleteEvent (fn [_ args _]
-                  (let [id (:id args)]
-                    (db/delete-event! id)
-                    {:id id :success true}))
-   :createGroup (fn [_ args _]
-                  (let [group-data (-> args :input)
-                        result (db/create-group! (-> group-data
+                    (map-db-event (db/get-event (get-in result [0 :id])))))
+   :updateEvent (fn [_ {:keys [id input]} _]
+                  (db/update-event! id (-> input
+                                           (set/rename-keys {:eventDate :event_date})))
+                  (map-db-event (db/get-event id)))
+   :deleteEvent (fn [_ {:keys [id]} _]
+                  (db/delete-event! id)
+                  {:id id :success true})
+   :createGroup (fn [_ {:keys [input]} _]
+                  (let [result (db/create-group! (-> input
                                                      (set/rename-keys {:leaderId :leader_id})))]
-                    (map-db-group (assoc group-data :id (get-in result [0 :id])))))})
+                    (map-db-group (db/get-group (get-in result [0 :id])))))})
 
 (def resolvers-map
   (merge
@@ -269,7 +254,42 @@
     :groups
     {:type '(list :Group),
      :description "Get all groups",
-     :resolve :groups}},
+     :resolve :groups},
+    :attendanceById
+    {:type :Attendance,
+     :description "Get an attendance record by ID",
+     :args {:id {:type '(non-null Int)}},
+     :resolve :attendance-by-id},
+    :attendancesByEvent
+    {:type '(list :Attendance),
+     :description "Get all attendances for a specific event",
+     :args {:eventId {:type '(non-null Int)}},
+     :resolve :attendances-by-event},
+    :attendancesByMember
+    {:type '(list :Attendance),
+     :description "Get all attendances for a specific member",
+     :args {:memberId {:type '(non-null Int)}},
+     :resolve :attendances-by-member},
+    :donationById
+    {:type :Donation,
+     :description "Get a donation by ID",
+     :args {:id {:type '(non-null Int)}},
+     :resolve :donation-by-id},
+    :donationsByMember
+    {:type '(list :Donation),
+     :description "Get all donations for a specific member",
+     :args {:memberId {:type '(non-null Int)}},
+     :resolve :donations-by-member},
+    :groupMembers
+    {:type '(list :Member),
+     :description "Get all members in a specific group",
+     :args {:groupId {:type '(non-null Int)}},
+     :resolve :group-members},
+    :memberGroups
+    {:type '(list :Group),
+     :description "Get all groups for a specific member",
+     :args {:memberId {:type '(non-null Int)}},
+     :resolve :member-groups}},
    :mutations
    {:createMember
     {:type :Member,
@@ -342,246 +362,15 @@
   {:DateTime {:parse str
               :serialize str}})
 
-;; Combine all resolvers into a single map
-(def resolvers-map
-  (merge field-resolvers
-         {:Query query-resolvers
-          :Mutation mutation-resolvers}))
-
 (defn load-schema
   "Loads the GraphQL schema with resolvers attached."
   []
   (try
     (log/info "Attaching resolvers to schema...")
-    (log/debug "Resolvers map:" resolvers-map)
     (let [schema-with-resolvers (util/attach-resolvers schema-edn resolvers-map)
-          _ (log/debug "Schema with resolvers:" schema-with-resolvers)
           final-schema (util/inject-scalar-transformers schema-with-resolvers scalar-transformers)]
       (log/info "Schema loaded successfully")
       final-schema)
     (catch Exception e
       (log/error e "Failed to load schema")
       (throw e))))
-     {:id {:type 'Int}
-      :memberId {:type 'Int}
-      :eventId {:type 'Int}
-      :attendedAt {:type 'String}
-      :createdAt {:type 'String}}
-
-    :Donation
-    {:description "A donation made to the church"
-     :fields
-     {:id {:type 'Int}
-      :memberId {:type 'Int}
-      :amount {:type '(non-null Float)}
-      :donationDate {:type '(non-null String)}
-      :purpose {:type 'String}
-      :createdAt {:type 'String}}}
-
-    :MemberGroupResult
-    {:description "Result of a member-group operation"
-     :fields
-     {:memberId {:type 'Int}
-      :groupId {:type 'Int}
-      :success {:type 'Boolean}}}
-
-    :DeleteResult
-    {:description "Result of a delete operation"
-     :fields {:id {:type 'Int}
-              :success {:type 'Boolean}}}
-
-   :input-objects
-   {:MemberInput
-    {:fields
-     {:firstName {:type '(non-null String)}
-      :lastName {:type '(non-null String)}
-      :email {:type 'String}
-      :phone {:type 'String}
-      :address {:type 'String}
-      :birthDate {:type 'String}
-      :joinedDate {:type 'String}}}
-
-    :EventInput
-    {:fields
-     {:name {:type '(non-null String)}
-      :description {:type 'String}
-      :startDate {:type '(non-null String)}
-      :endDate {:type 'String}
-      :location {:type 'String}}}
-
-    :GroupInput
-    {:fields
-     {:name {:type '(non-null String)}
-      :description {:type 'String}}}
-
-    :AttendanceInput
-    {:fields
-     {:memberId {:type 'Int}
-      :eventId {:type 'Int}
-      :attendedAt {:type 'String}}}
-
-    :DonationInput
-    {:fields
-     {:memberId {:type 'Int}
-      :amount {:type '(non-null Float)}
-      :donationDate {:type '(non-null String)}
-      :purpose {:type 'String}}}
-
-    :MemberGroupInput
-    {:fields
-     {:memberId {:type 'Int}
-      :groupId {:type 'Int}}}}
-
-   :queries
-   {:memberById
-    {:type :Member
-     :args {:id {:type 'Int}}
-     :resolve :query/member-by-id}
-
-    :allMembers
-    {:type '(list :Member)
-     :resolve :query/all-members}
-
-    :eventById
-    {:type :Event
-     :args {:id {:type 'Int}}
-     :resolve :query/event-by-id}
-
-    :allEvents
-    {:type '(list :Event)
-     :resolve :query/all-events}
-
-    :groupById
-    {:type :Group
-     :args {:id {:type 'Int}}
-     :resolve :query/group-by-id}
-
-    :allGroups
-    {:type '(list :Group)
-     :resolve :query/all-groups}
-
-    :attendanceById
-    {:type :Attendance
-     :args {:id {:type 'Int}}
-     :resolve :query/attendance-by-id}
-
-    :attendancesByEvent
-    {:type '(list :Attendance)
-     :args {:eventId {:type 'Int}}
-     :resolve :query/attendances-by-event}
-
-    :attendancesByMember
-    {:type '(list :Attendance)
-     :args {:memberId {:type 'Int}}
-     :resolve :query/attendances-by-member}
-
-    :donationById
-    {:type :Donation
-     :args {:id {:type 'Int}}
-     :resolve :query/donation-by-id}
-
-    :donationsByMember
-    {:type '(list :Donation)
-     :args {:memberId {:type 'Int}}
-     :resolve :query/donations-by-member}
-
-    :groupMembers
-    {:type '(list :Member)
-     :args {:groupId {:type 'Int}}
-     :resolve :query/group-members}
-
-    :memberGroups
-    {:type '(list :Group)
-     :args {:memberId {:type 'Int}}
-     :resolve :query/member-groups}}
-
-   :mutations
-   {:createMember
-    {:type :Member
-     :args {:input {:type :MemberInput}}
-     :resolve :mutation/create-member}
-
-    :updateMember
-    {:type :Member
-     :args {:id {:type 'Int}
-            :input {:type :MemberInput}}
-     :resolve :mutation/update-member}
-
-    :deleteMember
-    {:type :DeleteResult
-     :args {:id {:type 'Int}}
-     :resolve :mutation/delete-member}
-
-    :createEvent
-    {:type :Event
-     :args {:input {:type :EventInput}}
-     :resolve :mutation/create-event}
-
-    :updateEvent
-    {:type :Event
-     :args {:id {:type 'Int}
-            :input {:type :EventInput}}
-     :resolve :mutation/update-event}
-
-    :deleteEvent
-    {:type :DeleteResult
-     :args {:id {:type 'Int}}
-     :resolve :mutation/delete-event}
-
-    :createGroup
-    {:type :Group
-     :args {:input {:type :GroupInput}}
-     :resolve :mutation/create-group}
-
-    :updateGroup
-    {:type :Group
-     :args {:id {:type 'Int}
-            :input {:type :GroupInput}}
-     :resolve :mutation/update-group}
-
-    :deleteGroup
-    {:type :DeleteResult
-     :args {:id {:type 'Int}}
-     :resolve :mutation/delete-group}
-
-    :createAttendance
-    {:type :Attendance
-     :args {:input {:type :AttendanceInput}}
-     :resolve :mutation/create-attendance}
-
-    :updateAttendance
-    {:type :Attendance
-     :args {:id {:type 'Int}
-            :input {:type :AttendanceInput}}
-     :resolve :mutation/update-attendance}
-
-    :deleteAttendance
-    {:type :DeleteResult
-     :args {:id {:type 'Int}}
-     :resolve :mutation/delete-attendance}
-
-    :createDonation
-    {:type :Donation
-     :args {:input {:type :DonationInput}}
-     :resolve :mutation/create-donation}
-
-    :updateDonation
-    {:type :Donation
-     :args {:id {:type 'Int}
-            :input {:type :DonationInput}}
-     :resolve :mutation/update-donation}
-
-    :deleteDonation
-    {:type :DeleteResult
-     :args {:id {:type 'Int}}
-     :resolve :mutation/delete-donation}
-
-    :addMemberToGroup
-    {:type :MemberGroupResult
-     :args {:input {:type :MemberGroupInput}}
-     :resolve :mutation/add-member-to-group}
-
-    :removeMemberFromGroup
-    {:type :MemberGroupResult
-     :args {:input {:type :MemberGroupInput}}
-     :resolve :mutation/remove-member-from-group}}

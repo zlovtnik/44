@@ -58,7 +58,7 @@
    [[:member_id :integer "NOT NULL REFERENCES members(id)"]
     [:group_id :integer "NOT NULL REFERENCES groups(id)"]
     [:joined_at :datetime "DEFAULT CURRENT_TIMESTAMP"]
-    ["PRIMARY KEY" "(member_id, group_id)"]]})
+    ["PRIMARY KEY (member_id, group_id)"]]})
 
 ;; Create tables if they don't exist
 (defn create-tables! []
