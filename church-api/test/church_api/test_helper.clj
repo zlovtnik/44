@@ -1,5 +1,10 @@
 (ns church-api.test-helper
   (:require [clojure.java.jdbc :as jdbc]
+            [church-api.db :as db]))
+
+(defn db-fixture [f]
+  (db/create-tables!)
+  (f))
             [church-api.db :as db]
             [com.walmartlabs.lacinia :as lacinia]
             [com.walmartlabs.lacinia.schema :as lacinia-schema]
