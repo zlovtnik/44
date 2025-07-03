@@ -156,4 +156,4 @@
         (is (= 200 (:status response)))
         (let [members (get-in response [:body :data :group :members])]
           (is (= 1 (count members)))
-          (is (= "John" (get-in members [0 :firstName])))))))))
+          (is (= "John" (get-in members [0 :firstName]))))))))

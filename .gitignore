@@ -1,0 +1,30 @@
+.idea
+
+# Build output
+/target/
+/pom.xml
+/classes/
+
+# Clojure REPL and tooling files
+.nrepl-port
+.cpcache/
+.clj-kondo/.cache/
+.lsp/.cache/
+
+# Local database file
+database.sqlite
+
+# Log files
+*.log
+
+# Editor/IDE specific files
+.vscode/
+.idea/
+*.iml
+*~
+#*#
+.#*
+
+# OS-specific files
+.DS_Store
+Thumbs.db

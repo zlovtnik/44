@@ -82,6 +82,7 @@ clean:
 # Build uberjar
 .PHONY: build
 build:
+	$(CLOJURE) -Spom
 	$(CLOJURE) -T:build uber
 
 # Download dependencies

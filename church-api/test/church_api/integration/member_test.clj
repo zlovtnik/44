@@ -1,7 +1,6 @@
 (ns church-api.integration.member-test
-  (:require [clojure.test :refer :all]
-            [church-api.test-helper :as helper]
-            [church-api.db :as db]))
+  (:require [clojure.test :refer [deftest is testing use-fixtures]]
+            [church-api.test-helper :as helper]))
 
 (use-fixtures :once helper/with-test-db)
 (use-fixtures :each helper/with-test-data)

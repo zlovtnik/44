@@ -1,8 +1,8 @@
 (ns church-api.test-helper
   (:require [clojure.java.jdbc :as jdbc]
             [church-api.db :as db]
-            [clojure.test :refer :all]
             [com.walmartlabs.lacinia :as lacinia]
+            [com.walmartlabs.lacinia.schema :as lacinia-schema]
             [church-api.schema :as schema]
             [clojure.walk :as walk]))
 
@@ -13,17 +13,17 @@
    :subname     ":memory:"})
 
 ;; Replace the real db-spec with the test one for testing
-(defn with-test-db [f]
+(defn with-test-db [test-fn]
   (with-redefs [db/db-spec test-db-spec]
     (db/init-db!)
-    (f)))
+    (test-fn)))
 
 ;; Helper to execute GraphQL queries in tests
 (defn execute-query
   ([query] (execute-query query nil))
   ([query variables]
    (let [compiled-schema (-> (schema/load-schema)
-                            (com.walmartlabs.lacinia.schema/compile))]
+                            (lacinia-schema/compile))]
      (lacinia/execute compiled-schema query variables nil))))
 
 ;; Sample test data

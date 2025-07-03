@@ -164,3 +164,19 @@
   (jdbc/query db-spec ["SELECT g.* FROM groups g 
                        JOIN member_groups mg ON g.id = mg.group_id 
                        WHERE mg.member_id = ?" member-id]))
+
+;; Member attendances
+(defn get-member-attendances [member-id]
+  (jdbc/query db-spec ["SELECT e.* FROM events e
+                       JOIN attendances a ON e.id = a.event_id
+                       WHERE a.member_id = ?" member-id]))
+
+;; Event attendances
+(defn get-event-attendances [event-id]
+  (jdbc/query db-spec ["SELECT * FROM attendances
+                       WHERE event_id = ?" event-id]))
+
+;; Member donations
+(defn get-member-donations [member-id]
+  (jdbc/query db-spec ["SELECT * FROM donations
+                       WHERE member_id = ?" member-id]))
